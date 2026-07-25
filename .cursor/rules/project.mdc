@@ -1,0 +1,32 @@
+---
+description: Seeker project conventions — stack, phase boundaries, quality gates
+alwaysApply: true
+---
+
+# Seeker Project Rules
+
+## Phase boundary
+
+Phase 1 (current) is environment-only. Do NOT add game engine modules, game content, auth, or dashboards unless the task explicitly asks for Phase 2 work. Read `docs/VISION.md` and `docs/ARCHITECTURE.md` for product context.
+
+## Stack (do not swap without instruction)
+
+Next.js App Router + TypeScript + Tailwind at repo root, Prisma 6 + Postgres (Neon in prod, Docker Compose locally), Vitest, Playwright, GitHub Actions, pnpm.
+
+## Quality gates
+
+- Every change must pass `pnpm lint && pnpm typecheck && pnpm test` before it is considered done.
+- Changes to pages or API routes must also pass `pnpm test:e2e` (requires local Postgres: `docker compose up -d`).
+- Database schema changes go through Prisma migrations (`pnpm db:migrate`); never edit the database or migration history by hand.
+- Never weaken, skip, or delete CI checks to make a failing build pass.
+
+## Code style
+
+- Server Components by default; add `"use client"` only when interactivity requires it.
+- Strong typing everywhere; no `any` unless unavoidable and commented.
+- Small composable modules; shared logic lives in `lib/`.
+- No secrets in the repo. `DATABASE_URL` comes from `.env` locally (gitignored), GitHub secrets in CI, Vercel env vars in deploys.
+
+## When Phase 2 begins
+
+Keep the three-layer boundary: `engine/` stays generic (no book-specific logic), `content/` is pure data (no business logic), platform concerns stay out of both.
