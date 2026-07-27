@@ -64,7 +64,12 @@ Prefer local e2e for schema-sensitive work.
 ## Rollback
 
 - App: Vercel → Deployments → promote a previous production deployment (or `vercel rollback`).
+- In chat: say **“revert this”** / **“rollback”** — the deploy subagent restores the previous production deployment.
 - Database: forward-only. Reverse with a new migration locally, merge to `main`.
+
+## Ship-after-feature
+
+Finished features are quality-gated, committed, and auto-deployed to production unless the change involves risky/hard-to-rollback migrations (then the agent pauses for review). See `.cursor/rules/ship-after-feature.mdc`.
 
 ## Local database
 

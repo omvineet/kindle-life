@@ -5,24 +5,24 @@ alwaysApply: true
 
 # Deploy handoff
 
-When the user asks to **deploy, ship, release, push to trigger Vercel, verify a deployment, check production/preview health after ship, inspect a failed Vercel build, or roll back a deploy**, do **not** perform that work in the main agent.
+When the user asks to **deploy, ship, release, push to trigger Vercel, verify a deployment, check production/preview health after ship, inspect a failed Vercel build, or roll back a deploy** — **or** when `.cursor/rules/ship-after-feature.mdc` authorizes post-feature auto-ship — do **not** perform that work in the main agent.
 
 ## Handoff
 
 1. Launch a **Task** subagent with `subagent_type: "deployment-expert"`.
 2. Tell it to **read and follow** `.cursor/skills/deploy/SKILL.md` exactly.
-3. Pass concrete context: target (`preview` vs `main`/production), and any extra constraints (e.g. force redeploy).
-4. Wait for the subagent result, then summarize it for the user.
+3. Pass concrete context: target (`preview` vs `main`/production), and any extra constraints (e.g. force redeploy, rollback).
+4. Wait for the subagent result, then summarize it for the user (include live URL and that **“revert this”** rolls the app back).
 
-A bare **“Deploy this”** authorizes the deploy subagent to **detect current state** and run only missing steps: commit if dirty → push if ahead → ensure/force Vercel deploy for tip SHA → confirm migrations → publish static assets (git and/or Blob) if needed → health → report.
+A bare **“Deploy this”** or an authorized **ship-after-feature** handoff lets the deploy subagent **detect current state** and run only missing steps: commit if dirty → push if ahead → ensure/force Vercel deploy for tip SHA → confirm migrations → publish static assets (git and/or Blob) if needed → health → report.
 
 Clean working trees and “already committed” are normal — the subagent must **not** fail for lack of uncommitted files; it continues to push/Vercel checks.
 
 ## Main agent still owns
 
 - Writing app/code changes and creating Prisma migrations during feature work (`pnpm db:migrate`).
-- Commits during normal coding sessions **only when the user explicitly asks to commit** (outside a deploy request).
 - Local quality gates while implementing features.
+- Commits when shipping a finished feature (per ship-after-feature) or when the user explicitly asks to commit. Do not commit mid-feature WIP unless asked.
 
 ## Do not
 

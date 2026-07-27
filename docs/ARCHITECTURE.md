@@ -16,6 +16,7 @@ Planned modules:
 - Quest Engine
 - Choice Engine
 - Reflection Journal
+- Progression System (virtue points, levels, titles — individual growth, never competitive)
 - Achievement System
 - Save System
 - Inventory
@@ -39,6 +40,7 @@ Responsible for authentication, progress tracking, teacher dashboard, student pr
 - Prefer composition over inheritance.
 - No duplicated business logic.
 - Every module independently testable.
+- Progression (points, levels, titles) is individual and private — reflects one Seeker's own growth, never compared, ranked, or displayed against other players.
 
 ## Future Expansion
 

@@ -36,7 +36,7 @@ Neon injects `DATABASE_URL`. Migrations run **on Vercel production builds only**
 
 ## When to run
 
-Triggers: deploy, ship, release, push to trigger Vercel, redeploy, verify deploy/health, inspect failed deploy, rollback, publish static assets for a ship.
+Triggers: deploy, ship, release, push to trigger Vercel, redeploy, verify deploy/health, inspect failed deploy, rollback / “revert this”, publish static assets for a ship, **or** parent handoff after a finished feature (ship-after-feature rule).
 
 Out of scope: inventing migrations, editing applied migration history, committing secrets, creating Neon preview branches or extra Blob stores.
 
@@ -97,7 +97,7 @@ Never update git config. Never force-push `main`. Never `--no-verify` unless the
 
 ## Step 1 — Commit (only if `DIRTY`)
 
-Authorized on deploy/ship/release requests.
+Authorized on deploy/ship/release requests **and** ship-after-feature handoffs.
 
 1. Confirm migrations ready: if `prisma/schema.prisma` changed with no new `prisma/migrations/*` folder → **stop** and ask parent to create migration via `pnpm db:migrate`. Never invent SQL against Neon. Never edit applied migrations.
 2. Stage shippable files. **Never** stage `.env`, `.env.local`, tokens, private keys (`.env.example` is OK if tracked).
@@ -213,10 +213,13 @@ Always include detected state and what was skipped vs run:
 
 ---
 
-## Rollback (only if user asks)
+## Rollback (when user says revert / rollback / undo ship)
 
-- App: promote previous production deployment / `vercel rollback`.
-- DB: forward-only new migration; never delete applied migrations.
+Treat **“revert this”**, **“rollback”**, or **“undo the last deploy”** as an explicit rollback request.
+
+- App (preferred simple path): promote the previous READY production deployment (`vercel rollback` or Vercel MCP equivalent). Report the restored URL/SHA.
+- Prefer this over force-push or rewriting history on `main`.
+- DB: forward-only new migration if schema must change again; never delete applied migrations. If a destructive migration already applied, say so — app rollback alone may not restore old schema.
 
 ## Anti-patterns
 

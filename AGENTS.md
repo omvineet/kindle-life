@@ -45,11 +45,14 @@ Next.js (App Router, TypeScript, Tailwind) at repo root · Neon Postgres via Pri
 2. If the change affects pages/APIs, `pnpm test:e2e` passes locally.
 3. Schema changes ship with a Prisma migration (`pnpm db:migrate`), never by editing the DB directly.
 4. CI must be green before merge. Never weaken or skip CI checks to make a failure pass.
+5. **Ship by default:** after a finished feature/fix, commit + auto-deploy to production (`main`) via the deploy subagent. User checks the live site. Pause and ask only for risky/hard-to-rollback migrations. See `.cursor/rules/ship-after-feature.mdc`.
+6. **Simple revert:** say “revert this” / “rollback” → previous production deployment (app). DB is forward-only.
 
 ## Deploy flow (no manual steps after setup)
 
 - Default: push to `main` → Vercel production runs `pnpm db:deploy` then build.
 - Verify production health: `GET /api/health` should return `{"ok":true,"db":true}`.
+- App rollback: Vercel promote previous production deploy / `vercel rollback`.
 
 One Neon database and one Blob store. Test schema changes locally (Docker) before pushing to `main`.
 
@@ -59,7 +62,7 @@ All deploy/ship/push-for-Vercel/post-deploy health/rollback work is owned by the
 
 1. Main agent launches Task with `subagent_type: "deployment-expert"`.
 2. Subagent follows `.cursor/skills/deploy/SKILL.md` as a **state machine**: detect dirty/ahead/Vercel status → commit only if dirty → push if unpushed commits exist → ensure/force Vercel deploy for tip SHA → confirm migrate-on-build → publish static assets (git/`content` and/or Vercel Blob) if needed → `/api/health` → report.
-3. Clean tree / already-committed code is fine — do not fail; continue from the next missing step. Handoff: `.cursor/rules/deploy-handoff.mdc`.
+3. Clean tree / already-committed code is fine — do not fail; continue from the next missing step. Handoff: `.cursor/rules/deploy-handoff.mdc`. Triggers include explicit deploy asks **and** post-feature auto-ship.
 
 ## Runbooks
 

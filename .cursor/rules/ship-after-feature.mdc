@@ -1,0 +1,32 @@
+---
+description: After finishing a feature, always quality-gate, commit, auto-deploy; pause only for risky migrations; keep a simple revert path
+alwaysApply: true
+---
+
+# Ship after feature
+
+When a feature or non-trivial fix is **done**, do not stop at local code. Ship it unless a risk pause applies.
+
+## Default loop (no extra user ask)
+
+1. Finish implementation.
+2. Run quality gates: `pnpm lint && pnpm typecheck && pnpm test` (+ `pnpm test:e2e` if pages/APIs changed).
+3. Commit shippable changes (authorized by this rule — no separate “please commit”).
+4. Hand off deploy per `.cursor/rules/deploy-handoff.mdc` (deployment-expert + `.cursor/skills/deploy/SKILL.md`) to **production on `main`** unless the user said otherwise.
+5. Report live URL + health. User verifies on the live site; do not ask them to manually re-test every change locally.
+
+## Risk pause (ask before ship)
+
+Stop and ask for review when any of these are true:
+
+- Destructive or hard-to-reverse Prisma migrations (drop/rename columns/tables, data backfills that can’t undo cleanly).
+- Multi-step schema + app coupling where rolling back the app alone would break production.
+- Anything you judge too complex to reverse with a simple code revert / Vercel rollback.
+
+Additive migrations, UI/API-only changes, and routine fixes → ship without pausing.
+
+## Simple revert path (always leave this)
+
+- Prefer app-only or forward-compatible schema changes so **code revert** is enough.
+- After every ship, remind briefly: say **“revert this”** or **“rollback”** to restore the previous production deployment (Vercel rollback / promote prior deploy). DB stays forward-only — never delete applied migrations.
+- Do not leave the user without a one-phrase undo for app code.
