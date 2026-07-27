@@ -6,7 +6,7 @@ An interactive adventure game that teaches timeless spiritual principles through
 
 ## Stack
 
-Next.js (App Router, TypeScript, Tailwind) · Prisma 6 + Postgres (Neon in production, Docker locally) · Vitest · Playwright · GitHub Actions · Vercel · pnpm
+Next.js (App Router, TypeScript, Tailwind) · Prisma 6 + Postgres (Neon in production, Docker locally) · Vercel Blob · Vitest · Playwright · GitHub Actions · Vercel · pnpm
 
 ## Getting started
 
@@ -14,9 +14,12 @@ Next.js (App Router, TypeScript, Tailwind) · Prisma 6 + Postgres (Neon in produ
 pnpm install
 docker compose up -d        # local Postgres 16
 cp .env.example .env        # local DATABASE_URL
+pnpm dlx vercel@latest env pull .env.local --yes   # Blob token (linked project)
 pnpm db:deploy              # apply migrations
 pnpm dev                    # http://localhost:3000
 ```
+
+Static / object storage: [docs/runbooks/storage.md](docs/runbooks/storage.md).
 
 ## Checks
 

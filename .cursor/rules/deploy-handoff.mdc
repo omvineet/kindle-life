@@ -1,0 +1,29 @@
+---
+description: Hand off all deploy/push/ship/Vercel/migration-on-deploy work to the deploy subagent
+alwaysApply: true
+---
+
+# Deploy handoff
+
+When the user asks to **deploy, ship, release, push to trigger Vercel, verify a deployment, check production/preview health after ship, inspect a failed Vercel build, or roll back a deploy**, do **not** perform that work in the main agent.
+
+## Handoff
+
+1. Launch a **Task** subagent with `subagent_type: "deployment-expert"`.
+2. Tell it to **read and follow** `.cursor/skills/deploy/SKILL.md` exactly.
+3. Pass concrete context: target (`preview` branch vs `main`/production), and any extra user constraints.
+4. Wait for the subagent result, then summarize it for the user.
+
+A bare **“Deploy this”** (or equivalent) authorizes the deploy subagent to **commit shippable local changes, push to sync origin, trigger a new Vercel deployment, confirm migrations in that build, health-check, and report**. The main agent must not do those steps itself.
+
+## Main agent still owns
+
+- Writing app/code changes and creating Prisma migrations during feature work (`pnpm db:migrate`).
+- Commits during normal coding sessions **only when the user explicitly asks to commit** (outside a deploy request).
+- Local quality gates while implementing features.
+
+## Do not
+
+- Push for deploy, commit-for-deploy, drive Vercel builds, or post-deploy health checks yourself when a handoff applies.
+- Run `pnpm db:deploy` against production/Neon from the main agent.
+- Bypass the deploy skill for “just a quick push to main.”

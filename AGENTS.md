@@ -14,7 +14,7 @@ Seeker: an interactive adventure game teaching spiritual principles (based on "K
 
 ## Stack
 
-Next.js (App Router, TypeScript, Tailwind) at repo root · Neon Postgres via Prisma · Vercel hosting · Vitest unit tests · Playwright e2e · GitHub Actions CI · pnpm.
+Next.js (App Router, TypeScript, Tailwind) at repo root · Neon Postgres via Prisma · Vercel Blob (static/object storage) · Vercel hosting · Vitest unit tests · Playwright e2e · GitHub Actions CI · pnpm.
 
 ## Commands
 
@@ -35,6 +35,8 @@ Next.js (App Router, TypeScript, Tailwind) at repo root · Neon Postgres via Pri
 ## Environment variables
 
 - `DATABASE_URL` — Neon Postgres connection string. Local: put in `.env` (gitignored). CI: GitHub secret. Deploys: Vercel env var.
+- `BLOB_READ_WRITE_TOKEN` — Vercel Blob read/write token (store `seeker`). Local: `pnpm dlx vercel@latest env pull .env.local --yes`. Deploys: injected when the store is linked.
+- `CONTENT_ASSET_BASE` — optional public Blob/CDN base for heavy pack media; see `docs/runbooks/storage.md`.
 - Never commit secrets. `.env*` files are gitignored; keep it that way.
 
 ## Definition of Done (every change)
@@ -50,11 +52,21 @@ Next.js (App Router, TypeScript, Tailwind) at repo root · Neon Postgres via Pri
 - Merge to `main` → Vercel deploys production; migrations applied via `pnpm db:deploy` during build.
 - Verify production health: `GET /api/health` should return `{"ok":true,"db":true}`.
 
+### Deploy subagent (required handoff)
+
+All deploy/ship/push-for-Vercel/post-deploy health/rollback work is owned by the **deploy subagent**, not the main coding agent:
+
+1. Main agent launches Task with `subagent_type: "deployment-expert"`.
+2. Subagent follows `.cursor/skills/deploy/SKILL.md`: **commit local changes → push (sync origin) → new Vercel build → migrate-on-build → `/api/health` → report**.
+3. A bare “Deploy this” authorizes that commit+push+deploy path. Handoff is enforced by `.cursor/rules/deploy-handoff.mdc`.
+
 ## Runbooks
 
 - `docs/runbooks/ci-failure.md` — diagnosing and fixing CI failures.
 - `docs/runbooks/deploy.md` — deploys, env vars, migrations, rollback.
+- `docs/runbooks/storage.md` — Vercel Blob, asset URL resolver, agent upload playbook.
 - `docs/runbooks/e2e.md` — running and extending Playwright tests.
+- `.cursor/skills/deploy/SKILL.md` — deploy subagent playbook.
 
 ## Rules of the road
 

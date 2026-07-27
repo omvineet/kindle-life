@@ -11,7 +11,7 @@ Phase 1 (current) is environment-only. Do NOT add game engine modules, game cont
 
 ## Stack (do not swap without instruction)
 
-Next.js App Router + TypeScript + Tailwind at repo root, Prisma 6 + Postgres (Neon in prod, Docker Compose locally), Vitest, Playwright, GitHub Actions, pnpm.
+Next.js App Router + TypeScript + Tailwind at repo root, Prisma 6 + Postgres (Neon in prod, Docker Compose locally), Vercel Blob (object storage), Vitest, Playwright, GitHub Actions, pnpm.
 
 ## Quality gates
 
@@ -25,7 +25,7 @@ Next.js App Router + TypeScript + Tailwind at repo root, Prisma 6 + Postgres (Ne
 - Server Components by default; add `"use client"` only when interactivity requires it.
 - Strong typing everywhere; no `any` unless unavoidable and commented.
 - Small composable modules; shared logic lives in `lib/`.
-- No secrets in the repo. `DATABASE_URL` comes from `.env` locally (gitignored), GitHub secrets in CI, Vercel env vars in deploys.
+- No secrets in the repo. `DATABASE_URL` and `BLOB_READ_WRITE_TOKEN` come from `.env` / `.env.local` locally (gitignored), GitHub secrets in CI where needed, Vercel env vars in deploys. See `docs/runbooks/storage.md`.
 
 ## When Phase 2 begins
 

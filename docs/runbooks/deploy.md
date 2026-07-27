@@ -15,9 +15,10 @@ This project stores real user data, so production and preview must be **fully is
 2. **Neon via Vercel Marketplace** (not manual paste): Vercel project → **Storage** → add **Neon** → connect it to this project for Development, Preview, and Production.
    - In the integration's settings, enable **"Automatically create a branch for each preview deployment"** (preview branching). This is the step that makes real user data safe — without it, Preview and Production share one database.
    - The integration injects `DATABASE_URL` per environment automatically. **Do not** manually add a `DATABASE_URL` env var for Preview — a manually-set value overrides the per-branch one the integration injects and silently reintroduces the shared-database risk.
-3. **GitHub branch protection**: Settings → Branches → protect `main`, require the `Lint, typecheck, unit tests` and `E2E (Playwright)` checks.
-4. **Neon branch cleanup** (see below): create a Neon API key (Neon Console → Account Settings → API Keys) and add it to the repo as secret `NEON_API_KEY`; add the Neon project ID (Neon Console → Project Settings) as repo variable `NEON_PROJECT_ID`. GitHub → Settings → Secrets and variables → Actions.
-5. Optional: enable Cursor Cloud Agents / Automations for this repo (see `docs/automations.md`).
+3. **Vercel Blob** (object storage): public store `seeker` is provisioned and linked (injects `BLOB_READ_WRITE_TOKEN`). Full model and agent ops: `docs/runbooks/storage.md`. Recreate only if missing: `pnpm dlx vercel@latest blob create-store seeker --access public --yes`.
+4. **GitHub branch protection**: Settings → Branches → protect `main`, require the `Lint, typecheck, unit tests` and `E2E (Playwright)` checks.
+5. **Neon branch cleanup** (see below): create a Neon API key (Neon Console → Account Settings → API Keys) and add it to the repo as secret `NEON_API_KEY`; add the Neon project ID (Neon Console → Project Settings) as repo variable `NEON_PROJECT_ID`. GitHub → Settings → Secrets and variables → Actions.
+6. Optional: enable Cursor Cloud Agents / Automations for this repo (see `docs/automations.md`).
 
 After this, no manual deploy steps exist.
 

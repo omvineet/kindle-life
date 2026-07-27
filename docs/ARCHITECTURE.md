@@ -59,7 +59,28 @@ The engine should eventually support: multiple books, multiple languages, AI-gen
 | App | Next.js App Router + TypeScript + Tailwind |
 | DB | Neon Postgres + Prisma (preview branching enabled — real user data, prod/preview must stay isolated; see `docs/runbooks/deploy.md`) |
 | Hosting | Vercel (preview per PR, production on `main`) |
+| Object storage | Vercel Blob (public store `seeker`) — heavy pack media + runtime uploads; see **Static storage** below |
 | Unit tests | Vitest |
 | E2E | Playwright |
 | Package manager | pnpm |
 | CI | GitHub Actions |
+
+## Static storage
+
+Full-game media uses **git + Vercel Blob**. Do not add R2, S3, Supabase Storage, or Git LFS. Never store file bytes in Postgres.
+
+| Class | Examples | Where |
+|-------|----------|--------|
+| Content data | Dialogue, quests, choices | Git `content/<packId>/` |
+| Light media | Icons, portraits, tiny SFX | Git under pack `assets/` (served as `/content/...`) |
+| Heavy pack media | Music, narration, large scene art | Vercel Blob keys `packs/<packId>/<version>/...` |
+| Runtime / platform | Avatars, teacher files, later AI/UGC | Vercel Blob keys `users/`, `teachers/`, `generated/`, `ugc/` |
+
+Content JSON stores **relative keys only** (never Blob hostnames). `lib/assets.ts` resolves them:
+
+- No `CONTENT_ASSET_BASE` → `/content/{packId}/assets/{key}` (Phase 2 Chapter 0 default).
+- With `CONTENT_ASSET_BASE` → `{base}/packs/{packId}/{version}/{key}` (published heavy media).
+
+Server helpers live in `lib/blob.ts`. Agent/ops details: `docs/runbooks/storage.md`.
+
+**Rollout:** Chapter 0 keeps all media in git. When audio / large art lands, publish heavy globs to Blob and set `CONTENT_ASSET_BASE`. Platform uploads use the same store with auth-gated routes. Classroom launch expects Pro (Hobby Blob transfer is hard-capped). Escape hatch later: point `CONTENT_ASSET_BASE` at another CDN origin without changing content JSON.
