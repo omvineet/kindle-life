@@ -57,9 +57,9 @@ The engine should eventually support: multiple books, multiple languages, AI-gen
 | Piece | Choice |
 |-------|--------|
 | App | Next.js App Router + TypeScript + Tailwind |
-| DB | Neon Postgres + Prisma (preview branching enabled — real user data, prod/preview must stay isolated; see `docs/runbooks/deploy.md`) |
-| Hosting | Vercel (preview per PR, production on `main`) |
-| Object storage | Vercel Blob (public store `seeker`) — heavy pack media + runtime uploads; see **Static storage** below |
+| DB | Neon Postgres + Prisma — **one** database (no preview branching). Local Docker for day-to-day testing. See `docs/runbooks/deploy.md` |
+| Hosting | Vercel — one project; PR preview + production on `main` |
+| Object storage | Vercel Blob — **one** public store `seeker` (see **Static storage**) |
 | Unit tests | Vitest |
 | E2E | Playwright |
 | Package manager | pnpm |
@@ -84,3 +84,5 @@ Content JSON stores **relative keys only** (never Blob hostnames). `lib/assets.t
 Server helpers live in `lib/blob.ts`. Agent/ops details: `docs/runbooks/storage.md`.
 
 **Rollout:** Chapter 0 keeps all media in git. When audio / large art lands, publish heavy globs to Blob and set `CONTENT_ASSET_BASE`. Platform uploads use the same store with auth-gated routes. Classroom launch expects Pro (Hobby Blob transfer is hard-capped). Escape hatch later: point `CONTENT_ASSET_BASE` at another CDN origin without changing content JSON.
+
+**Environments:** one Blob store for local scripts, preview, and production (no Blob-per-env). Same simplification as the database — see `docs/runbooks/deploy.md`.

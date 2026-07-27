@@ -1,22 +1,23 @@
 ---
 name: deploy
 description: >-
-  Owns Seeker deployment end-to-end: stage and commit local changes, push to
-  GitHub, trigger a Vercel build, ensure Prisma migrations run during that build,
-  verify deploy success, and report. Use when asked to deploy, ship, release,
-  push for deploy, trigger a Vercel build, verify production/preview health, or
-  roll back. Main agents must hand off these tasks to a deployment-expert Task
-  subagent that follows this skill.
+  Owns Seeker deployment as a state machine: detect dirty/ahead/synced/Vercel
+  status, then only run missing steps — commit, push, force Vercel deploy,
+  confirm Prisma migrations, publish static assets (git or Vercel Blob), health
+  check, report. Never fails merely because there is nothing to commit. Use when
+  asked to deploy, ship, release, push for deploy, trigger/redeploy on Vercel,
+  verify health, or roll back. Main agents must hand off to a deployment-expert
+  Task subagent that follows this skill.
 disable-model-invocation: true
 ---
 
 # Seeker Deploy Subagent
 
-You own **all deployment work** for this repo. Do not write product features; only ship, verify, diagnose, or roll back deploys.
+You own **all deployment work**. Do not write product features.
 
-**A deploy request means you must actually ship:** commit local work → push to GitHub → wait for a **new** Vercel deployment for that commit → confirm migrations ran in that build → health-check → report. Do not stop early because origin already matched an older SHA.
+**Resume from whatever state the repo is in.** Detect first, then run only the missing steps. Never error or stop with “no uncommitted changes” / “nothing to commit” — that is a normal state; continue to push / Vercel / migrations / assets / health.
 
-Read `docs/runbooks/deploy.md` if something fails or architecture context is needed.
+Read `docs/runbooks/deploy.md` and `docs/runbooks/storage.md` when diagnosing deploys or static assets.
 
 ## Project facts
 
@@ -27,54 +28,81 @@ Read `docs/runbooks/deploy.md` if something fails or architecture context is nee
 | Vercel team | `seva2` (`team_xiWuV5i8f1pnvdEhxOPYB9FP`) |
 | Production URL | `https://kindle-life.vercel.app` |
 | Health | `GET /api/health` → expect `{"ok":true,"db":true}` |
-| Build command | `pnpm db:deploy && pnpm build` (in `vercel.json`) |
+| Build command | `sh scripts/vercel-build.sh` — `pnpm db:deploy` **only when** `VERCEL_ENV=production`, then `pnpm build` |
+| Blob store | `seeker` (`store_1WMHNyCevIL0npDx`), public base `https://1wmhnycevil0npdx.public.blob.vercel-storage.com` |
+| Database | **One** Neon database (no preview branching). Local Docker for day-to-day testing. |
 
-Neon injects `DATABASE_URL` via the Vercel Marketplace integration. Migrations run **on Vercel during build** (`prisma migrate deploy`), not by the agent against production.
+Neon injects `DATABASE_URL`. Migrations run **on Vercel production builds only**, not from the agent against Neon, and not on preview builds.
 
 ## When to run
 
-Triggers: deploy, ship, release, push to trigger Vercel, verify deploy/health, inspect failed deploy, rollback.
+Triggers: deploy, ship, release, push to trigger Vercel, redeploy, verify deploy/health, inspect failed deploy, rollback, publish static assets for a ship.
 
-Out of scope: inventing migrations, editing applied migration history, manually setting Preview `DATABASE_URL`, committing secrets.
+Out of scope: inventing migrations, editing applied migration history, committing secrets, creating Neon preview branches or extra Blob stores.
 
-## Checklist
+---
 
+## Step 0 — Detect state (always first)
+
+Run in parallel and classify:
+
+```bash
+git status -sb
+git status --porcelain
+git rev-parse HEAD
+git rev-parse @{u} 2>/dev/null || true
+git log -5 --oneline
+git log @{u}..HEAD --oneline 2>/dev/null || true   # unpushed commits
+git diff --stat
+git diff --stat @{u}..HEAD 2>/dev/null || true
 ```
-Deploy progress:
-- [ ] 1. Preflight
-- [ ] 2. Migrations ready
-- [ ] 3. Commit local changes
-- [ ] 4. Push to GitHub (sync origin)
-- [ ] 5. Confirm new Vercel build + migrations
-- [ ] 6. Verify health
-- [ ] 7. Report
-```
 
-### 1. Preflight
+Also query Vercel for the current branch tip SHA (after you know HEAD / origin tip):
 
-- Confirm target: current branch → preview; `main` → production (default when on `main`).
-- Run in parallel: `git status -sb`, `git diff` / `git diff --stat`, `git log -5 --oneline`, check tracking vs `origin`.
-- If shipping app/API changes and gates were not run recently, run `pnpm lint && pnpm typecheck && pnpm test` (and `pnpm test:e2e` if pages/APIs changed). Do not weaken CI.
-- Never update git config. Never force-push `main`. Never `--no-verify` unless the user explicitly requests it.
+- MCP: `list_deployments` / `get_deployment` for project + team IDs above
+- Look for a deployment whose commit SHA matches **origin tip** (or local HEAD once pushed)
 
-### 2. Migrations ready
+### State flags
 
-Schema changes must already exist as Prisma migration files under `prisma/migrations/` (created via `pnpm db:migrate` during feature work).
+| Flag | Meaning |
+|------|---------|
+| `DIRTY` | Uncommitted tracked/untracked shippable changes |
+| `AHEAD` | Local commits not on `origin` (`@{u}..HEAD` non-empty) |
+| `SYNCED` | Branch matches origin (not ahead/behind for our purposes) |
+| `VERCEL_MISSING` | No deployment for origin tip SHA |
+| `VERCEL_PENDING` | Deployment exists for tip but Building / Queued |
+| `VERCEL_FAILED` | Deployment for tip is ERROR / CANCELED |
+| `VERCEL_READY` | Deployment for tip is READY |
+| `ASSETS_PENDING` | New/changed heavy media or light `content/` assets not yet published (see Step 5) |
 
-Before commit/push:
+Target: current branch → preview; `main` → production.
 
-- If `prisma/schema.prisma` changed but no new migration folder exists → **stop**. Ask the parent/user to create a migration first. Never invent SQL by hand against Neon.
-- Never edit or delete an already-applied migration.
-- Do **not** run `pnpm db:deploy` against production/Neon from the agent. Vercel’s build runs it.
+Never update git config. Never force-push `main`. Never `--no-verify` unless the user explicitly requests it.
 
-### 3. Commit local changes
+### Decision table (do not invent other exits)
 
-When the user asked to **deploy / ship / release**, you **are** authorized to commit. Stage and commit all shippable local changes on the current branch so push can trigger a real Vercel build.
+| Situation | Action |
+|-----------|--------|
+| `DIRTY` | Step 1 → then continue |
+| clean working tree | **Skip commit.** Do **not** fail. Continue. |
+| `AHEAD` (committed locally only) | Step 2 push |
+| `SYNCED` + `VERCEL_MISSING` / `VERCEL_FAILED` | Step 3 **force** Vercel deploy for tip SHA |
+| `SYNCED` + `VERCEL_PENDING` | Step 3 wait |
+| `SYNCED` + `VERCEL_READY` | Skip rebuild unless user asked to redeploy/force; still run Steps 4–6 |
+| User said force/redeploy | Step 3 force even if READY |
+| `ASSETS_PENDING` | Step 5 |
+| Always before finish | Steps 4 (migrations check), 6 (health), 7 (report) |
 
-1. `git status` / `git diff` / `git log` (follow the repo’s commit-message style).
-2. Stage relevant files. **Never** stage secrets: `.env`, `.env.*`, credentials, private keys. Warn and exclude them if present.
-3. Exclude junk: `.next/`, `node_modules/`, local-only noise. Prefer intentional paths over `git add -A` when status is messy.
-4. Commit with a HEREDOC message focused on why:
+---
+
+## Step 1 — Commit (only if `DIRTY`)
+
+Authorized on deploy/ship/release requests.
+
+1. Confirm migrations ready: if `prisma/schema.prisma` changed with no new `prisma/migrations/*` folder → **stop** and ask parent to create migration via `pnpm db:migrate`. Never invent SQL against Neon. Never edit applied migrations.
+2. Stage shippable files. **Never** stage `.env`, `.env.local`, tokens, private keys (`.env.example` is OK if tracked).
+3. Exclude `.next/`, `node_modules/`, junk.
+4. Commit with HEREDOC (repo style, why-focused):
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -84,79 +112,118 @@ EOF
 )"
 ```
 
-5. If there is truly nothing to commit and the branch is already synced, still proceed to verify whether origin tip already has a **READY** Vercel deploy for that SHA; if yes, report that and re-verify health. If local is ahead or you just committed, you **must** push (step 4).
-6. If commit fails due to a hook, fix the issue and create a **new** commit (do not amend unless amend rules in user git protocol are fully met).
+5. If hook fails → fix → **new** commit (amend only if user git amend rules are fully met).
+6. If porcelain is empty → log `commit: skipped (clean)` and continue. **Never** treat this as failure.
 
-### 4. Push to GitHub (sync origin)
+Optional gates when shipping app/API code: `pnpm lint && pnpm typecheck && pnpm test` (+ e2e if pages/APIs changed). Do not weaken CI.
 
-Git push is the deploy trigger — prefer it over `vercel deploy`.
+---
+
+## Step 2 — Push (only if `AHEAD` or you just committed)
 
 ```bash
 git push -u origin HEAD
 ```
 
-- This syncs local branch with `origin` (e.g. local `main` → `origin/main`).
-- Feature branch → preview deployment.
-- `main` → production.
-- After push, confirm `git status -sb` shows in sync with origin (not “ahead”).
-- Open/update a PR with `gh` only when the user asked for a PR path or you are not on `main`.
+- Syncs local → origin (e.g. `main` → `origin/main`).
+- After push: `git status -sb` must not show “ahead”.
+- Unpushed commits are a **normal** deploy case — push them; do not ask the user to push manually unless auth is blocked.
 
-If git push does not create a deployment within a few minutes, diagnose (GitHub↔Vercel connection). Only use `vercel deploy` / `vercel --prod` if git deploy is broken and you document why.
+If behind origin → fetch, report divergence; do not force-push `main`.
 
-### 5. Confirm new Vercel build + migrations
+---
 
-Wait for a deployment whose metadata matches the **commit you just pushed** (not an older READY deploy).
+## Step 3 — Ensure Vercel deployment for tip SHA
 
-- Prefer Vercel MCP: `list_deployments` / `get_deployment` / `get_deployment_build_logs` with project + team IDs above.
-- Or poll GitHub deployment / check status for that SHA.
+Goal: a deployment for **current origin tip** (production on `main`, preview otherwise).
 
-Confirm build logs show:
+1. List deployments; match `meta.githubCommitSha` (or equivalent) to tip.
+2. If `VERCEL_PENDING` → wait until READY or FAILED (MCP + polling).
+3. If `VERCEL_MISSING` or `VERCEL_FAILED`, or user asked to **force** redeploy → **force a new deployment**:
+   - Prefer Git-triggered redeploy: empty commit only if user explicitly allows; otherwise use Vercel redeploy / deploy for that commit.
+   - CLI fallback when git hook did not fire: `pnpm dlx vercel@latest deploy --prod --yes` on `main`, or preview deploy on feature branches (document why CLI was used).
+   - Redeploy the failed deployment when that recovers the same SHA.
+4. Wait until state is `READY` or terminal failure.
 
-1. `pnpm db:deploy` / `prisma migrate deploy` succeeded — either applied pending migrations or reported none pending / already applied.
-2. `pnpm build` / Next.js build succeeded.
-3. Deployment state `READY` for the intended target (preview or production).
+Confirm build logs:
 
-If build fails on `DATABASE_URL` / Prisma P1012 → Neon integration / env is broken; follow `docs/runbooks/deploy.md`. Do not paste connection strings into chat.
+1. If **production**: `pnpm db:deploy` / `prisma migrate deploy` — applied pending migrations **or** “No pending migrations”. Preview builds should **not** run migrate.
+2. `pnpm build` succeeded.
+3. Deployment `READY`.
 
-If the deployment errors, fix forward if it’s a deploy-config issue you own; otherwise report failure clearly — do not claim success.
+`DATABASE_URL` / P1012 failures → Neon/env per `docs/runbooks/deploy.md`. Never paste connection strings.
 
-### 6. Verify health
+---
+
+## Step 4 — Migrations check
+
+Always verify from **this** deployment’s build logs (Step 3). Do **not** run `pnpm db:deploy` against production Neon from the agent.
+
+- **Production:** report migrations applied (names) or none pending. If migrate failed, treat deploy as failed.
+- **Preview:** confirm migrate was skipped; schema changes must have been validated locally before merge.
+
+---
+
+## Step 5 — Static storage (git and/or Vercel Blob)
+
+Follow `docs/runbooks/storage.md`. Never store file bytes in Postgres. Never commit Blob tokens.
+
+| Asset class | Where | Deploy action |
+|-------------|--------|----------------|
+| Content JSON / light media | Git `content/<packId>/` | Must be in the commit that was pushed (Step 1–2) |
+| Heavy pack media (audio, large art) | Vercel Blob `packs/<packId>/<version>/...` | Upload if new/changed and not already on Blob |
+| Runtime/platform uploads | Blob via app (`lib/blob.ts`) | Not a deploy-agent dump unless user asked to publish specific files |
+
+When heavy media is part of this ship:
 
 ```bash
-# Production
-curl -sS https://kindle-life.vercel.app/api/health
-# Preview: use the deployment URL from Vercel/PR
-curl -sS https://<deployment-url>/api/health
+pnpm dlx vercel@latest blob put ./path/to/file --pathname packs/<packId>/<version>/<key>
 ```
 
-Expect HTTP 200 and `{"ok":true,"db":true}`.
+- Ensure `CONTENT_ASSET_BASE` is set on Vercel to `https://1wmhnycevil0npdx.public.blob.vercel-storage.com` when heavy media is live; leave unset while Chapter 0 is git-only.
+- Content JSON must keep **relative keys only** (`lib/assets.ts` resolves).
+- If nothing to publish → log `assets: skipped (none pending)` and continue.
+- Auth for CLI: `vercel env pull .env.local --yes` if needed; never commit `.env.local`.
 
-If `db: false` or 503: check build logs for migrate failures, then Neon/`DATABASE_URL` per runbook. For auth-gated preview URLs, use Vercel MCP `web_fetch_vercel_url` / `get_access_to_vercel_url`.
+---
 
-### 7. Report
+## Step 6 — Health
 
-Return a short status to the parent agent / user:
+```bash
+curl -sS https://kindle-life.vercel.app/api/health
+# or preview deployment URL
+```
 
-- What was committed (summary) and commit SHA
-- Branch pushed and that origin is synced
-- Vercel deployment URL + id + state (`READY` / failed) for **this** commit
-- Migration outcome from build logs (applied X / none pending)
-- Health check body
-- Next action if anything failed
+Expect HTTP 200 and `{"ok":true,"db":true}`. Auth-gated previews → Vercel MCP `web_fetch_vercel_url` / `get_access_to_vercel_url`.
 
-## Rollback
+---
 
-Only when the user asks:
+## Step 7 — Report
 
-- App: promote previous production deployment (Vercel dashboard / CLI `vercel rollback`).
-- DB: forward-only — new migration that reverses the change; never delete applied migrations.
+Always include detected state and what was skipped vs run:
+
+- Detected flags (`DIRTY` / `AHEAD` / `VERCEL_*` / `ASSETS_*`)
+- Commit: SHA created **or** `skipped (clean)`
+- Push: synced **or** `skipped (already on origin)` — list SHAs that were unpushed
+- Vercel: deployment id, URL, state for **tip SHA**; whether force/redeploy was used
+- Migrations: applied / none pending (from build logs)
+- Assets: uploaded keys **or** `skipped`
+- Health body
+- Blockers / next actions if failed
+
+---
+
+## Rollback (only if user asks)
+
+- App: promote previous production deployment / `vercel rollback`.
+- DB: forward-only new migration; never delete applied migrations.
 
 ## Anti-patterns
 
-- Skipping commit/push because “production already looks healthy” while local changes remain uncommitted.
-- Reporting an older deployment as the result of this deploy request.
-- Deploying via ad-hoc `vercel --prod` when a git push would suffice.
-- Applying migrations to Neon from the laptop for “prod”.
-- Manually adding Preview `DATABASE_URL` (overrides branch DB; data-safety risk).
-- Committing `.env` / secrets.
-- Shipping without confirming health when the task was “deploy”.
+- Failing or stopping because the working tree is clean.
+- Ignoring local commits that are not on origin.
+- Reporting an older READY deploy when tip SHA has no deploy.
+- Skipping force/redeploy when tip has `VERCEL_MISSING` or `VERCEL_FAILED`.
+- Applying migrations to Neon from the laptop.
+- Committing secrets / `.env*`.
+- Putting binaries in Neon or using Git LFS.

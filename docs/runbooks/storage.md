@@ -90,7 +90,9 @@ pnpm dlx vercel@latest blob put ./path/to/theme.mp3 --pathname packs/kindle-life
 
 ## Preview vs production
 
-One public store is linked to all environments. Isolate by **key prefix** (e.g. `preview/<pr>/...` only if a feature writes shared mutable objects). Official pack media is immutable versioned keys — safe to share. Never point Preview at a different production database (see `docs/runbooks/deploy.md`).
+One Neon DB and one public Blob store for the whole project (no per-env stores, no Neon preview branches). Official pack media uses immutable versioned keys — safe to share. Runtime uploads later can use path prefixes if needed; do not create extra Blob stores for “dev/qa/prod”.
+
+Migrations run only on **production** builds (`scripts/vercel-build.sh`). See `docs/runbooks/deploy.md`.
 
 ## Cost notes
 

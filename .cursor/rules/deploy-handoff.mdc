@@ -11,10 +11,12 @@ When the user asks to **deploy, ship, release, push to trigger Vercel, verify a 
 
 1. Launch a **Task** subagent with `subagent_type: "deployment-expert"`.
 2. Tell it to **read and follow** `.cursor/skills/deploy/SKILL.md` exactly.
-3. Pass concrete context: target (`preview` branch vs `main`/production), and any extra user constraints.
+3. Pass concrete context: target (`preview` vs `main`/production), and any extra constraints (e.g. force redeploy).
 4. Wait for the subagent result, then summarize it for the user.
 
-A bare **“Deploy this”** (or equivalent) authorizes the deploy subagent to **commit shippable local changes, push to sync origin, trigger a new Vercel deployment, confirm migrations in that build, health-check, and report**. The main agent must not do those steps itself.
+A bare **“Deploy this”** authorizes the deploy subagent to **detect current state** and run only missing steps: commit if dirty → push if ahead → ensure/force Vercel deploy for tip SHA → confirm migrations → publish static assets (git and/or Blob) if needed → health → report.
+
+Clean working trees and “already committed” are normal — the subagent must **not** fail for lack of uncommitted files; it continues to push/Vercel checks.
 
 ## Main agent still owns
 

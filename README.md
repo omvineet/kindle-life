@@ -30,7 +30,7 @@ pnpm test:e2e                              # Playwright (needs Postgres)
 
 ## Deploy
 
-Push a PR → GitHub Actions gates it → Vercel builds a preview. Merge to `main` → Vercel deploys production and applies Prisma migrations automatically. Details and one-time setup: [docs/runbooks/deploy.md](docs/runbooks/deploy.md).
+Push a PR → GitHub Actions gates it → Vercel may build a preview. Merge to `main` → Vercel deploys production and applies Prisma migrations. One Neon DB + one Blob. Details: [docs/runbooks/deploy.md](docs/runbooks/deploy.md).
 
 ## For AI agents
 

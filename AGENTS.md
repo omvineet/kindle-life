@@ -48,17 +48,18 @@ Next.js (App Router, TypeScript, Tailwind) at repo root · Neon Postgres via Pri
 
 ## Deploy flow (no manual steps after setup)
 
-- Push branch → open PR → GitHub Actions runs lint/typecheck/unit/Prisma validate/e2e → Vercel builds a preview.
-- Merge to `main` → Vercel deploys production; migrations applied via `pnpm db:deploy` during build.
+- Default: push to `main` → Vercel production runs `pnpm db:deploy` then build.
 - Verify production health: `GET /api/health` should return `{"ok":true,"db":true}`.
+
+One Neon database and one Blob store. Test schema changes locally (Docker) before pushing to `main`.
 
 ### Deploy subagent (required handoff)
 
 All deploy/ship/push-for-Vercel/post-deploy health/rollback work is owned by the **deploy subagent**, not the main coding agent:
 
 1. Main agent launches Task with `subagent_type: "deployment-expert"`.
-2. Subagent follows `.cursor/skills/deploy/SKILL.md`: **commit local changes → push (sync origin) → new Vercel build → migrate-on-build → `/api/health` → report**.
-3. A bare “Deploy this” authorizes that commit+push+deploy path. Handoff is enforced by `.cursor/rules/deploy-handoff.mdc`.
+2. Subagent follows `.cursor/skills/deploy/SKILL.md` as a **state machine**: detect dirty/ahead/Vercel status → commit only if dirty → push if unpushed commits exist → ensure/force Vercel deploy for tip SHA → confirm migrate-on-build → publish static assets (git/`content` and/or Vercel Blob) if needed → `/api/health` → report.
+3. Clean tree / already-committed code is fine — do not fail; continue from the next missing step. Handoff: `.cursor/rules/deploy-handoff.mdc`.
 
 ## Runbooks
 
