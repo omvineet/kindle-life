@@ -1,0 +1,44 @@
+{
+  "id": "demo",
+  "title": "The Quiet Garden (Demo)",
+  "version": "0.1.0",
+  "entryChapterId": "welcome",
+  "chapterIds": ["welcome"],
+  "virtueTracks": [
+    {
+      "id": "awareness",
+      "title": "Awareness",
+      "description": "Noticing what is actually here, moment to moment."
+    },
+    {
+      "id": "compassion",
+      "title": "Compassion",
+      "description": "Caring for others without expecting anything back."
+    }
+  ],
+  "quests": [
+    {
+      "id": "find-your-quiet",
+      "title": "Find Your Quiet",
+      "description": "The Guide has invited you to explore the garden and find the stillness at its heart.",
+      "objectives": [
+        { "id": "choose-a-path", "label": "Choose a path into the garden" },
+        { "id": "reach-the-heart", "label": "Reach the heart of the garden" }
+      ]
+    }
+  ],
+  "achievements": [
+    {
+      "id": "found-the-quiet",
+      "title": "Found the Quiet",
+      "description": "You reached the heart of the garden."
+    }
+  ],
+  "items": [
+    {
+      "id": "quiet-stone",
+      "title": "A Quiet Stone",
+      "description": "Smooth and cool — a small reminder to pause."
+    }
+  ]
+}

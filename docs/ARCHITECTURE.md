@@ -8,21 +8,24 @@ Content (data)  -->  Game Engine (generic code)  -->  Platform (accounts, ops)
 
 ## 1. Game Engine
 
-Responsible for all reusable gameplay systems. The engine **never contains Kindle Life–specific logic**.
+Responsible for all reusable gameplay systems, implemented under `engine/`. The engine **never contains Kindle Life–specific logic** — no book, chapter, or "Seeker" references anywhere in `engine/`. It only knows about generic `ContentPack`s and a generic `PlayerState`. See [Game Engine details](#game-engine-details) below.
 
-Planned modules:
+Modules (`engine/<module>/`):
 
-- Dialogue Engine
-- Quest Engine
-- Choice Engine
-- Reflection Journal
-- Progression System (virtue points, levels, titles — individual growth, never competitive)
-- Achievement System
-- Save System
-- Inventory
-- Scene Navigation
-- Animation Manager
-- Audio Manager
+- Dialogue Engine (`dialogue/`)
+- Choice Engine (`choice/`)
+- Quest Engine (`quest/`)
+- Reflection Journal (`journal/`)
+- Progression System (`progression/`) — virtue points, levels, titles; individual growth, never competitive
+- Achievement System (`achievements/`)
+- Inventory (`inventory/`)
+- Scene Navigation (`scene/`)
+- Effect Engine (`effects/`) — the single place that turns a content-authored `Effect` into state changes, shared by choices/scene-enter/reflections
+- Save System (`save/`) — create/serialize/deserialize `PlayerState`
+- Animation Manager (`animation/`) and Audio Manager (`audio/`) — thin, framework-agnostic timing/state helpers
+- Content Loader (`content/`) — reads + zod-validates a pack from `content/<packId>/`
+
+All composed behind one orchestrator, `engine/engine.ts`'s `GameEngine` class — the only thing platform code talks to.
 
 ## 2. Content
 
@@ -42,6 +45,38 @@ Responsible for authentication, progress tracking, teacher dashboard, student pr
 - Every module independently testable.
 - Progression (points, levels, titles) is individual and private — reflects one Seeker's own growth, never compared, ranked, or displayed against other players.
 
+## Game Engine details
+
+### Folder layout
+
+```
+engine/
+  types.ts                     # ContentPack, Scene, Choice, Quest, PlayerState, GameEvent, zod schemas
+  engine.ts, index.ts          # GameEngine orchestrator + public exports
+  content/content-loader.ts    # loads + validates a pack from content/<packId>/
+  dialogue/  choice/  quest/  journal/  progression/  achievements/  inventory/
+  scene/  effects/  save/  animation/  audio/
+content/
+  demo/                        # non-canonical fixture pack — proves the engine end to end
+  <future chapter packs>/      # one folder per Kindle Life chapter, added chapter by chapter
+lib/game/
+  session.ts                   # anonymous guest session (signed httpOnly cookie -> Player row)
+  save-repository.ts           # the only module that knows both Prisma's SaveState and PlayerState
+app/play/
+  page.tsx, actions.ts         # Server Component + Server Actions calling GameEngine
+  components/                  # client components: dialogue, choice, reflection, exits, growth, journal
+```
+
+### Content pack schema
+
+A pack lives at `content/<packId>/`: a `pack.json` manifest (id, title, version, `entryChapterId`, `chapterIds`, virtue tracks, quests, achievements, items) plus `chapters/<chapterId>/chapter.json` and `chapters/<chapterId>/scenes/<sceneId>.json` files. `loadContentPack(packId)` validates every file with zod and cross-checks every reference (exits, effect targets, quest/achievement/item/virtue-track ids) so a broken pack fails loudly with a precise error at load time rather than crashing mid-scene. See `content/demo/` for a complete worked example.
+
+A `Scene` can carry dialogue lines, an `onEnter` effect, a `choice` (branching, no "wrong" option), a `reflection` prompt (+ effect), and `exits`. An `Effect` is the single shape used everywhere (choice outcomes, scene entry, post-reflection): it can set flags, grant items, award virtue points, unlock achievements, start/advance quests, add a journal note, and/or transition to another scene. `engine/effects/effect-engine.ts` is the one place that applies it.
+
+### Save / session model
+
+No accounts yet (that's the "Later" platform phase). A visitor gets an anonymous `Player` row identified by a signed httpOnly cookie (`lib/game/session.ts`); a `SaveState` row per `(player, pack)` mirrors the engine's `PlayerState` as JSON columns (`lib/game/save-repository.ts`), including `progression` (virtue points) and `resolvedChoices` (so a choice's effect — and a reflection's — only ever applies once, even if replayed). Real accounts can attach to the same `Player` row later without a data migration.
+
 ## Future Expansion
 
 The engine should eventually support: multiple books, multiple languages, AI-generated content, community-created adventures, teacher lesson plans, and classroom mode.
@@ -50,8 +85,8 @@ The engine should eventually support: multiple books, multiple languages, AI-gen
 
 | Phase | Scope | Status |
 |-------|-------|--------|
-| Phase 1 | Agent-managed environment: Next.js scaffold, Neon Postgres + Prisma, Vercel deploys, GitHub Actions CI, Playwright e2e, agent runbooks and automations. **No game code.** | Current |
-| Phase 2 | Generic game engine + data-driven Kindle Life content (Chapter 0 demo first) | Not started |
+| Phase 1 | Agent-managed environment: Next.js scaffold, Neon Postgres + Prisma, Vercel deploys, GitHub Actions CI, Playwright e2e, agent runbooks and automations. **No game code.** | Done |
+| Phase 2 | Generic game engine (done, validated by a non-canonical `content/demo/` pack) + data-driven Kindle Life content, chapter by chapter (not started) | In progress |
 | Later | Platform features: auth, teacher dashboard, profiles, analytics | Not started |
 
 ## Phase 1 Tech Stack (locked)

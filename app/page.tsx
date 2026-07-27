@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Home() {
   return (
     <div className="relative flex min-h-full flex-1 flex-col overflow-hidden">
@@ -11,16 +13,24 @@ export default function Home() {
       />
       <main className="relative z-10 mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-6 py-20">
         <p className="mb-4 text-sm font-medium uppercase tracking-[0.2em] text-[#2f5d4a]">
-          Phase 1 · Environment
+          Phase 2 · Game Engine
         </p>
         <h1 className="font-[family-name:var(--font-display)] text-5xl leading-tight tracking-tight text-[#1c2b24] sm:text-6xl">
           Seeker
         </h1>
         <p className="mt-6 max-w-xl text-lg leading-relaxed text-[#3d5248]">
           An interactive adventure that teaches timeless spiritual principles
-          through exploration, stories, puzzles, and reflection. The game
-          arrives in Phase 2 — this build proves the agent-managed platform.
+          through exploration, stories, choices, and reflection — a private
+          journey of growth, never a competition.
         </p>
+        <div className="mt-10">
+          <Link
+            href="/play"
+            className="inline-block rounded-full bg-[#2f5d4a] px-8 py-3 text-sm font-medium tracking-wide text-[#f3e8d4] transition hover:bg-[#264b3c]"
+          >
+            Begin your journey as the Seeker
+          </Link>
+        </div>
         <p className="mt-8 text-sm text-[#5a7266]">
           Health check:{" "}
           <a

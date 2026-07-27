@@ -7,7 +7,7 @@ alwaysApply: true
 
 ## Phase boundary
 
-Phase 1 (current) is environment-only. Do NOT add game engine modules, game content, auth, or dashboards unless the task explicitly asks for Phase 2 work. Read `docs/VISION.md` and `docs/ARCHITECTURE.md` for product context.
+Phase 2 (current) is the generic game engine, now built (`engine/`, `lib/game/`, `app/play/`) and validated by a non-canonical `content/demo/` pack. Real Kindle Life chapter content lands next, chapter by chapter, as new `content/<packId>/` packs. Do NOT add auth, teacher dashboards, or other "Later" platform features unless the task explicitly asks for that work. Read `docs/VISION.md` and `docs/ARCHITECTURE.md` for product context.
 
 ## Stack (do not swap without instruction)
 
@@ -27,6 +27,6 @@ Next.js App Router + TypeScript + Tailwind at repo root, Prisma 6 + Postgres (Ne
 - Small composable modules; shared logic lives in `lib/`.
 - No secrets in the repo. `DATABASE_URL` and `BLOB_READ_WRITE_TOKEN` come from `.env` / `.env.local` locally (gitignored), GitHub secrets in CI where needed, Vercel env vars in deploys. See `docs/runbooks/storage.md`.
 
-## When Phase 2 begins
+## Three-layer boundary
 
-Keep the three-layer boundary: `engine/` stays generic (no book-specific logic), `content/` is pure data (no business logic), platform concerns stay out of both.
+`engine/` stays generic (no book-specific logic, no Prisma/cookie imports), `content/<packId>/` is pure data (no business logic), platform concerns (`lib/game/`, `app/play/`) stay out of both.

@@ -1,0 +1,9 @@
+{
+  "id": "grove",
+  "title": "The Grove",
+  "dialogue": [{ "speaker": "Guide", "text": "You made it." }],
+  "onEnter": {
+    "completeObjectives": [{ "questId": "find-the-grove", "objectiveId": "reach-grove" }]
+  },
+  "exits": [{ "id": "to-hub", "label": "Return to the hub", "targetSceneId": "hub" }]
+}

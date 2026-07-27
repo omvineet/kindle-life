@@ -1,0 +1,14 @@
+{
+  "id": "hub",
+  "title": "The Hub",
+  "dialogue": [],
+  "choice": {
+    "id": "hub-choice",
+    "prompt": "What do you do?",
+    "options": [
+      { "id": "a", "label": "Option A", "effect": { "awardPoints": { "compassion": 1 } } },
+      { "id": "b", "label": "Option B" }
+    ]
+  },
+  "exits": []
+}

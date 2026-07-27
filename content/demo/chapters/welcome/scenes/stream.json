@@ -1,0 +1,30 @@
+{
+  "id": "stream",
+  "title": "The Stream",
+  "dialogue": [
+    { "speaker": "Narrator", "text": "A small bird hops along the bank, chirping at nothing in particular." },
+    { "speaker": "Guide", "text": "It doesn't need anything from you. It's simply glad you're here." }
+  ],
+  "choice": {
+    "id": "stream-choice",
+    "prompt": "The bird tilts its head at you.",
+    "options": [
+      {
+        "id": "watch",
+        "label": "Watch quietly and let it be",
+        "effect": { "awardPoints": { "awareness": 1 } }
+      },
+      {
+        "id": "greet",
+        "label": "Speak a soft greeting to it",
+        "effect": {
+          "awardPoints": { "compassion": 1 },
+          "addJournalNote": "You greeted a small bird, and it did not fly away."
+        }
+      }
+    ]
+  },
+  "exits": [
+    { "id": "to-heart", "label": "Follow the stream to the heart of the garden", "targetSceneId": "heart" }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "id": "valid-pack",
+  "title": "Valid Test Pack",
+  "version": "0.0.1",
+  "entryChapterId": "chapter-1",
+  "chapterIds": ["chapter-1"],
+  "virtueTracks": [
+    { "id": "compassion", "title": "Compassion" },
+    { "id": "awareness", "title": "Awareness" }
+  ],
+  "quests": [
+    {
+      "id": "find-the-grove",
+      "title": "Find the Grove",
+      "description": "Locate the quiet grove.",
+      "objectives": [
+        { "id": "leave-hub", "label": "Step outside" },
+        { "id": "reach-grove", "label": "Reach the grove" }
+      ]
+    }
+  ],
+  "achievements": [
+    { "id": "first-steps", "title": "First Steps", "description": "Began the journey." }
+  ],
+  "items": [
+    { "id": "lotus-petal", "title": "Lotus Petal", "description": "A small reminder of stillness." }
+  ]
+}

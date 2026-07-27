@@ -10,7 +10,7 @@ Seeker: an interactive adventure game teaching spiritual principles (based on "K
 
 ## Current phase
 
-**Phase 1: environment only.** Do NOT build game engine modules, content packs, auth, or dashboards unless explicitly asked. Phase 2 (game engine + content) has not started.
+**Phase 2: game engine, in progress.** The generic engine (`engine/`) and platform glue (`lib/game/`, `app/play/`) are built and validated end to end by a non-canonical fixture pack (`content/demo/`). Real Kindle Life chapter content has not started yet — it lands chapter by chapter as new `content/<packId>/` packs, reusing the existing engine. Do NOT build auth, teacher dashboards, or other "Later" platform features unless explicitly asked. See `docs/ARCHITECTURE.md`'s "Game Engine details" section for the folder layout and content pack schema.
 
 ## Stack
 
@@ -74,7 +74,7 @@ All deploy/ship/push-for-Vercel/post-deploy health/rollback work is owned by the
 
 ## Rules of the road
 
-- Keep the three-layer boundary (engine/content/platform) once Phase 2 begins; engine code must stay generic.
+- Keep the three-layer boundary: `engine/` stays 100% generic (no book/"Seeker" references, no Prisma/cookie imports), `content/<packId>/` is pure data, platform concerns (`lib/game/`, `app/play/`) stay out of both.
 - Server Components by default; Client Components only when interactivity requires it.
 - Small, composable modules; strong typing; no duplicated business logic.
 - Prefer the simplest thing that works. This codebase is maintained primarily by AI agents — optimize for readability.

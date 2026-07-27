@@ -1,0 +1,36 @@
+{
+  "id": "gate",
+  "title": "The Garden Gate",
+  "dialogue": [
+    { "speaker": "Guide", "text": "You have arrived at the garden gate, Seeker." },
+    { "speaker": "Guide", "text": "Two paths lie ahead. Neither is more right than the other — only different." }
+  ],
+  "onEnter": { "startQuest": "find-your-quiet" },
+  "choice": {
+    "id": "gate-choice",
+    "prompt": "Which path calls to you?",
+    "options": [
+      {
+        "id": "bench",
+        "label": "The quiet bench beneath the old tree",
+        "effect": {
+          "awardPoints": { "awareness": 2 },
+          "setFlags": { "choseBench": true },
+          "completeObjectives": [{ "questId": "find-your-quiet", "objectiveId": "choose-a-path" }],
+          "goToScene": "bench"
+        }
+      },
+      {
+        "id": "stream",
+        "label": "The stream, where a bird is calling",
+        "effect": {
+          "awardPoints": { "compassion": 2 },
+          "setFlags": { "choseStream": true },
+          "completeObjectives": [{ "questId": "find-your-quiet", "objectiveId": "choose-a-path" }],
+          "goToScene": "stream"
+        }
+      }
+    ]
+  },
+  "exits": []
+}

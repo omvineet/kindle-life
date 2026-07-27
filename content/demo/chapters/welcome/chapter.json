@@ -1,0 +1,7 @@
+{
+  "id": "welcome",
+  "title": "Welcome to the Garden",
+  "order": 1,
+  "entrySceneId": "gate",
+  "sceneIds": ["gate", "bench", "stream", "heart"]
+}

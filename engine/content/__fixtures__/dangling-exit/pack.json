@@ -1,0 +1,7 @@
+{
+  "id": "dangling-exit",
+  "title": "Dangling Exit",
+  "version": "0.0.1",
+  "entryChapterId": "chapter-1",
+  "chapterIds": ["chapter-1"]
+}

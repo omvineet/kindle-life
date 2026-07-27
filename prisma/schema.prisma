@@ -11,10 +11,46 @@ datasource db {
 }
 
 /// Minimal platform stub so migrate/deploy paths are real in Phase 1.
-/// Game tables arrive in Phase 2.
 model HealthProbe {
   id        String   @id @default(cuid())
   label     String   @unique @default("bootstrap")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+/// An anonymous, cookie-identified visitor. No login yet (see docs/ARCHITECTURE.md's
+/// "Later" platform phase) — `token` is the opaque value stored in a signed httpOnly
+/// cookie by lib/game/session.ts. The engine itself never sees this model directly;
+/// it only ever operates on the generic `PlayerState` shape from engine/types.ts.
+model Player {
+  id          String      @id @default(cuid())
+  token       String      @unique
+  displayName String
+  avatarKey   String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  saveStates  SaveState[]
+}
+
+/// One save per (player, content pack) — see engine/save/save-engine.ts for the
+/// `PlayerState` shape these JSON columns mirror. Progression (virtue points) is
+/// stored here too: it is always scoped to a single player's own save, never
+/// aggregated or compared across players.
+model SaveState {
+  id              String   @id @default(cuid())
+  playerId        String
+  player          Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  packId          String
+  sceneId         String
+  flags           Json     @default("{}")
+  inventory       Json     @default("[]")
+  journal         Json     @default("[]")
+  achievements    Json     @default("[]")
+  quests          Json     @default("{}")
+  progression     Json     @default("{}")
+  resolvedChoices Json     @default("{}")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([playerId, packId])
 }

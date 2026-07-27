@@ -1,0 +1,20 @@
+{
+  "id": "hub",
+  "title": "The Hub",
+  "dialogue": [{ "speaker": "Guide", "text": "Welcome, Seeker." }],
+  "choice": {
+    "id": "hub-choice",
+    "prompt": "What do you do?",
+    "options": [
+      { "id": "reflect", "label": "Sit and reflect", "effect": { "awardPoints": { "awareness": 2 } } },
+      {
+        "id": "help",
+        "label": "Help a stranger",
+        "effect": { "awardPoints": { "compassion": 2 }, "addItems": ["lotus-petal"] }
+      }
+    ]
+  },
+  "reflection": { "id": "hub-reflection", "question": "What do you notice?" },
+  "reflectionEffect": { "awardPoints": { "awareness": 1 } },
+  "exits": [{ "id": "to-grove", "label": "Walk to the grove", "targetSceneId": "grove" }]
+}

@@ -28,6 +28,12 @@ export {
 
 export { applyEffect, type EffectResult } from "./effects/effect-engine";
 
+export {
+  resolveChoice,
+  hasResolvedChoice,
+  getResolvedOptionId,
+} from "./choice/choice-engine";
+
 export { addItem, hasItem, listInventory, type AddItemResult } from "./inventory/inventory-engine";
 
 export {

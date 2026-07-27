@@ -1,0 +1,6 @@
+{
+  "id": "bad-manifest",
+  "title": "Bad Manifest",
+  "entryChapterId": "chapter-1",
+  "chapterIds": ["chapter-1"]
+}

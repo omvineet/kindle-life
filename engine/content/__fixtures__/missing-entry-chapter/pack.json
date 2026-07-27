@@ -1,0 +1,7 @@
+{
+  "id": "missing-entry-chapter",
+  "title": "Missing Entry Chapter",
+  "version": "0.0.1",
+  "entryChapterId": "nope",
+  "chapterIds": ["chapter-1"]
+}

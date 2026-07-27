@@ -194,6 +194,8 @@ export interface PlayerState {
   quests: Record<string, QuestProgress>;
   /** Virtue track id -> accumulated points. Individual growth only, never a global score. */
   progression: Record<string, number>;
+  /** Choice id -> chosen option id. Once a choice is resolved its effect never re-applies (no farming points by re-clicking). */
+  resolvedChoices: Record<string, string>;
   updatedAt: string;
 }
 

@@ -1,0 +1,16 @@
+{
+  "id": "heart",
+  "title": "The Heart of the Garden",
+  "dialogue": [
+    { "speaker": "Guide", "text": "Here is the stillness at the center of the garden." },
+    { "speaker": "Guide", "text": "You will find it in yourself, too, whenever you slow down enough to notice." }
+  ],
+  "onEnter": {
+    "completeObjectives": [{ "questId": "find-your-quiet", "objectiveId": "reach-the-heart" }],
+    "addItems": ["quiet-stone"],
+    "unlockAchievements": ["found-the-quiet"]
+  },
+  "exits": [
+    { "id": "to-gate", "label": "Return to the garden gate", "targetSceneId": "gate" }
+  ]
+}

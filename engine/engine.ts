@@ -7,9 +7,10 @@
  */
 
 import { listAchievements } from "./achievements/achievement-engine";
+import { resolveChoice } from "./choice/choice-engine";
 import { applyEffect } from "./effects/effect-engine";
 import { listInventory } from "./inventory/inventory-engine";
-import { getJournalEntries, recordReflection } from "./journal/reflection-journal";
+import { getJournalEntries, hasReflected, recordReflection } from "./journal/reflection-journal";
 import { getProgressionSummary } from "./progression/progression-engine";
 import { getQuestProgress } from "./quest/quest-engine";
 import { canTakeExit, getAvailableExits, getCurrentScene, getScene } from "./scene/scene-navigation";
@@ -57,7 +58,11 @@ export class GameEngine {
     return getQuestProgress(state, questId);
   }
 
-  /** Select an option for the scene's current choice. */
+  /**
+   * Select an option for the scene's current choice. Every option is a valid
+   * outcome; if this choice was already resolved, the effect will not
+   * re-apply (see engine/choice/choice-engine.ts).
+   */
   choose(state: PlayerState, choiceId: string, optionId: string): EngineResult {
     const scene = getCurrentScene(this.pack, state);
     if (!scene.choice || scene.choice.id !== choiceId) {
@@ -67,7 +72,10 @@ export class GameEngine {
     if (!option) {
       throw new Error(`Choice "${choiceId}" has no option "${optionId}"`);
     }
-    return this.applyEffectAndEnter(state, option.effect);
+
+    const { state: afterChoice, events } = resolveChoice(this.pack, state, scene.choice, optionId);
+    const entered = this.maybeEnterScene(afterChoice, option.effect, 0);
+    return { state: entered.state, events: [...events, ...entered.events] };
   }
 
   /** Move to another scene via one of the current scene's exits. */
@@ -77,33 +85,42 @@ export class GameEngine {
     }
     const scene = getCurrentScene(this.pack, state);
     const exit = scene.exits.find((candidate) => candidate.id === exitId)!;
-    return this.enterScene(state, exit.targetSceneId);
+    return this.enterScene(state, exit.targetSceneId, 0);
   }
 
-  /** Record the player's answer to the current scene's reflection prompt. */
+  /**
+   * Record the player's answer to the current scene's reflection prompt. The
+   * reflection effect (if any) only ever fires the first time — editing a
+   * saved answer later updates the journal without re-awarding points.
+   */
   submitReflection(state: PlayerState, promptId: string, answer: string): EngineResult {
     const scene = getCurrentScene(this.pack, state);
     if (!scene.reflection || scene.reflection.id !== promptId) {
       throw new Error(`Scene "${scene.id}" has no reflection prompt "${promptId}"`);
     }
+    const alreadyReflected = hasReflected(state, promptId);
     const reflected = recordReflection(state, promptId, scene.id, answer);
-    return this.applyEffectAndEnter(reflected, scene.reflectionEffect);
+    if (alreadyReflected) {
+      return { state: reflected, events: [] };
+    }
+    const { state: afterEffect, events } = applyEffect(this.pack, reflected, scene.reflectionEffect);
+    const entered = this.maybeEnterScene(afterEffect, scene.reflectionEffect, 0);
+    return { state: entered.state, events: [...events, ...entered.events] };
   }
 
-  private applyEffectAndEnter(
+  /** If `effect` requests a scene transition, moves there and fires its onEnter effect (possibly chained). */
+  private maybeEnterScene(
     state: PlayerState,
     effect: Effect | undefined,
-    depth = 0,
+    depth: number,
   ): EngineResult {
-    const { state: afterEffect, events } = applyEffect(this.pack, state, effect);
-    if (effect?.goToScene) {
-      const entered = this.enterScene(afterEffect, effect.goToScene, depth);
-      return { state: entered.state, events: [...events, ...entered.events] };
+    if (!effect?.goToScene) {
+      return { state, events: [] };
     }
-    return { state: afterEffect, events };
+    return this.enterScene(state, effect.goToScene, depth);
   }
 
-  private enterScene(state: PlayerState, sceneId: string, depth = 0): EngineResult {
+  private enterScene(state: PlayerState, sceneId: string, depth: number): EngineResult {
     if (depth > MAX_EFFECT_CHAIN_DEPTH) {
       throw new Error(
         `Effect chain too deep entering scene "${sceneId}" — check content for a scene loop`,
@@ -111,6 +128,8 @@ export class GameEngine {
     }
     const scene = getScene(this.pack, sceneId);
     const moved: PlayerState = { ...state, sceneId };
-    return this.applyEffectAndEnter(moved, scene.onEnter, depth + 1);
+    const { state: afterEnter, events } = applyEffect(this.pack, moved, scene.onEnter);
+    const chained = this.maybeEnterScene(afterEnter, scene.onEnter, depth + 1);
+    return { state: chained.state, events: [...events, ...chained.events] };
   }
 }

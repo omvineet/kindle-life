@@ -1,0 +1,17 @@
+{
+  "id": "bench",
+  "title": "The Old Bench",
+  "dialogue": [
+    { "speaker": "Narrator", "text": "The bench is worn smooth by seasons of quiet visitors." },
+    { "speaker": "Guide", "text": "Sit for a moment. There is nowhere else you need to be." }
+  ],
+  "reflection": {
+    "id": "bench-reflection",
+    "question": "What thought settles when you stop moving?",
+    "placeholder": "Write whatever comes to mind..."
+  },
+  "reflectionEffect": { "awardPoints": { "awareness": 1 } },
+  "exits": [
+    { "id": "to-heart", "label": "Walk on toward the heart of the garden", "targetSceneId": "heart" }
+  ]
+}

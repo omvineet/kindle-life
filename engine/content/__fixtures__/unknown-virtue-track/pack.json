@@ -1,0 +1,8 @@
+{
+  "id": "unknown-virtue-track",
+  "title": "Unknown Virtue Track",
+  "version": "0.0.1",
+  "entryChapterId": "chapter-1",
+  "chapterIds": ["chapter-1"],
+  "virtueTracks": []
+}

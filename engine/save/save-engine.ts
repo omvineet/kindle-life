@@ -27,6 +27,7 @@ export function createInitialPlayerState(
     achievements: [],
     quests: {},
     progression: {},
+    resolvedChoices: {},
     updatedAt: new Date().toISOString(),
   };
 }
@@ -43,6 +44,7 @@ export interface SerializedPlayerState {
   achievements: string[];
   quests: Record<string, QuestProgress>;
   progression: Record<string, number>;
+  resolvedChoices: Record<string, string>;
   updatedAt: string;
 }
 
@@ -62,6 +64,7 @@ export function deserializePlayerState(data: SerializedPlayerState): PlayerState
     achievements: data.achievements ?? [],
     quests: data.quests ?? {},
     progression: data.progression ?? {},
+    resolvedChoices: data.resolvedChoices ?? {},
     updatedAt: data.updatedAt ?? new Date().toISOString(),
   };
 }

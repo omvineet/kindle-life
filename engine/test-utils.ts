@@ -93,6 +93,7 @@ export function makeTestState(overrides: Partial<PlayerState> = {}): PlayerState
     achievements: [],
     quests: {},
     progression: {},
+    resolvedChoices: {},
     updatedAt: new Date(0).toISOString(),
   };
   return { ...base, ...overrides };
